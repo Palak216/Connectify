@@ -38,5 +38,4 @@ router.post("/delete/:id", isLoggedIn, deletePost);
 // Toggle Like
 router.post("/like/:id", isLoggedIn, toggleLike);
 
-
 module.exports = router;

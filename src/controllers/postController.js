@@ -1,19 +1,22 @@
 const db = require("../config/db");
 
-// ================= CREATE POST =================
+// ================= SHOW CREATE POST PAGE =================
 exports.getCreatePost = (req, res) => {
   res.render("createPost");
 };
 
+// ================= CREATE POST =================
 exports.createPost = async (req, res) => {
   try {
+    if (!req.session.user) {
+      return res.redirect("/login");
+    }
+
     const { content } = req.body;
-
-    const imageUrl = req.file ? "/uploads/" + req.file.filename : null;
-
+    const imageUrl = req.file ? req.file.path : null;
     const userId = req.session.user.id;
 
-    await pool.query(
+    await db.query(
       "INSERT INTO posts (content, image_url, user_id) VALUES (?, ?, ?)",
       [content, imageUrl, userId]
     );
@@ -22,7 +25,7 @@ exports.createPost = async (req, res) => {
 
   } catch (error) {
     console.error("CREATE POST ERROR:", error);
-    res.redirect("/feed");
+    res.status(500).send("Error creating post");
   }
 };
 
@@ -32,12 +35,10 @@ exports.deletePost = async (req, res) => {
     const postId = req.params.id;
     const userId = req.session.user.id;
 
-    // Delete only if owner
-    await pool.query(
-  "INSERT INTO posts (content, image_url, user_id) VALUES (?, ?, ?)",
-  [content, imageUrl, req.session.user.id]
-);
-
+    await db.query(
+      "DELETE FROM posts WHERE id = ? AND user_id = ?",
+      [postId, userId]
+    );
 
     res.redirect("/feed");
 
@@ -47,7 +48,7 @@ exports.deletePost = async (req, res) => {
   }
 };
 
-// ================= LIKE TOGGLE =================
+// ================= TOGGLE LIKE =================
 exports.toggleLike = async (req, res) => {
   try {
     const postId = req.params.id;

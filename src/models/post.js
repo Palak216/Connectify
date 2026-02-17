@@ -1,37 +1,31 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
-const cloudinary = require("../config/cloudinary");
+const postController = require("../controllers/postController");
+console.log("POST CONTROLLER:", postController);
+
 const isLoggedIn = require("../middlewares/authmiddleware");
 
-const {
-  getCreatePost,
-  createPost,
-  deletePost,
-  toggleLike
-} = require("../controllers/postController");
-
-// Cloudinary storage
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: "mini-instagram",
-    allowed_formats: ["jpg", "png", "jpeg"],
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "uploads/");
   },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + "-" + file.originalname);
+  }
 });
 
 const upload = multer({ storage });
 
-// ================= ROUTES =================
+router.get("/post", isLoggedIn, postController.getCreatePost);
 
-router.get("/post", isLoggedIn, getCreatePost);
+router.post("/post", isLoggedIn, upload.single("image"), postController.createPost);
 
-router.post("/post", isLoggedIn, upload.single("image"), createPost);
+router.get("/feed", isLoggedIn, postController.getFeed);
 
-router.post("/delete/:id", isLoggedIn, deletePost);
+router.post("/delete/:id", isLoggedIn, postController.deletePost);
 
-router.post("/like/:id", isLoggedIn, toggleLike);
+router.post("/like/:id", isLoggedIn, postController.toggleLike);
 
-module.exports = router;
+module.exports=router;

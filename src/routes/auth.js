@@ -1,9 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcrypt");
-
-// Temporary in-memory users array
-const users = [];
+const db = require("../config/db");
 
 // ------------------
 // Pages
@@ -22,16 +20,22 @@ router.get("/register", (req, res) => {
 // ------------------
 
 router.post("/register", async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { username, email, password } = req.body;
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-  users.push({
-    email,
-    password: hashedPassword
-  });
+    await db.query(
+      "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
+      [username, email.trim(), hashedPassword]
+    );
 
-  res.redirect("/login");
+    res.redirect("/login");
+
+  } catch (err) {
+    console.error("REGISTER ERROR:", err);
+    res.send("Registration failed");
+  }
 });
 
 // ------------------
@@ -39,13 +43,19 @@ router.post("/register", async (req, res) => {
 // ------------------
 
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  const email = req.body.email.trim();
+  const password = req.body.password;
 
-  const user = users.find(u => u.email === email);
+  const [rows] = await db.query(
+    "SELECT * FROM users WHERE email = ?",
+    [email]
+  );
 
-  if (!user) {
+  if (rows.length === 0) {
     return res.send("User not found");
   }
+
+  const user = rows[0];
 
   const match = await bcrypt.compare(password, user.password);
 
@@ -53,9 +63,13 @@ router.post("/login", async (req, res) => {
     return res.send("Invalid password");
   }
 
-  req.session.user = user;
+  req.session.user = {
+    id: user.id,
+    username: user.username,
+    email: user.email
+  };
 
-  res.redirect("/");
+  res.redirect("/feed");
 });
 
 module.exports = router;

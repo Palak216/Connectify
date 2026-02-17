@@ -9,11 +9,17 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+app.use(express.static("public"));
+app.use("/uploads", express.static("uploads"));
+
+
 app.use(session({
-  secret: 'mini-instagram-secret',
+  secret: "mysupersecret",
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  cookie: { secure: false }   // IMPORTANT for localhost
 }));
+
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views')); // ✅ FIXED
@@ -41,6 +47,7 @@ app.set('views', path.join(__dirname, '../views')); // ✅ FIXED
 
 // app.set("view engine", "ejs");
 //  app.set("views", path.join(__dirname, "../../views"));
+
 
 app.use("/", authRoutes);
 app.use("/", feedRoutes);   // 🔥 THIS LINE MUST EXIST
