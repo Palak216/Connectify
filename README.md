@@ -98,7 +98,7 @@ node index.js
 5️⃣ Open in browser
 Visit:
 
-http://localhost:5000;
+http://localhost:5173;
 ```
 ---
 

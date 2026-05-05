@@ -1,15 +1,22 @@
-const users = []; // in-memory store (NO DB yet)
+const mongoose = require("mongoose");
 
-class User {
-  static async create({ username, email, password }) {
-    const user = { id: users.length + 1, username, email, password };
-    users.push(user);
-    return user;
-  }
+const userSchema = new mongoose.Schema({
+  username: { 
+    type: String, 
+    required: true,
+    trim: true
+  },
+  email: { 
+    type: String, 
+    required: true, 
+    unique: true,
+    trim: true,
+    lowercase: true
+  },
+  password: { 
+    type: String, 
+    required: true 
+  },
+}, { timestamps: true });
 
-  static async findOne({ email }) {
-    return users.find(user => user.email === email);
-  }
-}
-
-module.exports = User;
+module.exports = mongoose.model("User", userSchema);

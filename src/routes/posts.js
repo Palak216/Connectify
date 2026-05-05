@@ -7,35 +7,48 @@ const cloudinary = require("../config/cloudinary");
 const isLoggedIn = require("../middlewares/authmiddleware");
 
 const { 
-  getCreatePost, 
   createPost, 
+  getAllPosts,
   deletePost,
-  toggleLike 
+  toggleLike,
+  addComment
 } = require("../controllers/postController");
 
-// Cloudinary storage
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: "mini-instagram",
-    allowed_formats: ["jpg", "png", "jpeg"],
-  },
-});
-
-const upload = multer({ storage });
+// Try to use Cloudinary storage if configured, fallback to disk
+let upload;
+try {
+  const storage = new CloudinaryStorage({
+    cloudinary,
+    params: {
+      folder: "mini-instagram",
+      allowed_formats: ["jpg", "png", "jpeg"],
+    },
+  });
+  upload = multer({ storage });
+} catch (e) {
+  // Fallback to local storage
+  const storage = multer.diskStorage({
+    destination: function (req, file, cb) { cb(null, "uploads/"); },
+    filename: function (req, file, cb) { cb(null, Date.now() + "-" + file.originalname); }
+  });
+  upload = multer({ storage });
+}
 
 // ================= ROUTES =================
 
-// Show create post page
-router.get("/post", isLoggedIn, getCreatePost);
+// Get all posts (Feed)
+router.get("/posts", isLoggedIn, getAllPosts);
 
 // Create post
-router.post("/post", isLoggedIn, upload.single("image"), createPost);
+router.post("/posts", isLoggedIn, upload.single("image"), createPost);
 
 // Delete post
-router.post("/delete/:id", isLoggedIn, deletePost);
+router.delete("/posts/:id", isLoggedIn, deletePost);
 
 // Toggle Like
-router.post("/like/:id", isLoggedIn, toggleLike);
+router.post("/posts/:id/like", isLoggedIn, toggleLike);
+
+// Add Comment
+router.post("/posts/:id/comments", isLoggedIn, addComment);
 
 module.exports = router;

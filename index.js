@@ -1,51 +1,14 @@
-require("dotenv").config();
-
+// require("dotenv").config();
+require("dotenv").config({ path: "./.env" });
 const express = require("express");
 const session = require("express-session");
 const path = require("path");
+const { connectDb } = require("./src/config/db"); // ✅ ADD THIS
 
 const app = express();
 
+// ✅ CONNECT DB HERE
+connectDb();
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
-app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "src", "views"));
-
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "supersecret",
-    resave: false,
-    saveUninitialized: false,
-  })
-);
-
-app.use((req, res, next) => {
-  res.locals.user = req.session.user || null;
-  next();
-});
-app.get("/", (req, res) => {
-  if (!req.session.user) {
-    return res.redirect("/login");
-  }
-  res.redirect("/feed");
-});
-
-
-const authRoutes = require("./src/routes/auth");
-const postRoutes = require("./src/routes/posts");
-const feedRoutes = require("./src/routes/feed");
-const commentRoutes = require("./src/routes/comment");
-
-app.use("/", authRoutes);
-app.use("/", postRoutes);
-app.use("/", feedRoutes);
-app.use("/", commentRoutes);
-
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});

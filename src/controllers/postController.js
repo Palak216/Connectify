@@ -1,31 +1,50 @@
-const db = require("../config/db");
-
-// ================= SHOW CREATE POST PAGE =================
-exports.getCreatePost = (req, res) => {
-  res.render("createPost");
-};
+const Post = require("../models/post");
+const Comment = require("../models/comment");
 
 // ================= CREATE POST =================
 exports.createPost = async (req, res) => {
   try {
-    if (!req.session.user) {
-      return res.redirect("/login");
-    }
-
     const { content } = req.body;
     const imageUrl = req.file ? req.file.path : null;
-    const userId = req.session.user.id;
+    const userId = req.user.id;
 
-    await db.query(
-      "INSERT INTO posts (content, image_url, user_id) VALUES (?, ?, ?)",
-      [content, imageUrl, userId]
-    );
+    const newPost = new Post({
+      content,
+      imageUrl,
+      author: userId
+    });
 
-    res.redirect("/feed");
+    await newPost.save();
+
+    res.status(201).json({
+      message: "Post created successfully",
+      post: newPost
+    });
 
   } catch (error) {
     console.error("CREATE POST ERROR:", error);
-    res.status(500).send("Error creating post");
+    res.status(500).json({ message: "Error creating post" });
+  }
+};
+
+// ================= GET ALL POSTS =================
+exports.getAllPosts = async (req, res) => {
+  try {
+    const posts = await Post.find()
+      .populate("author", "username")
+      .populate({
+        path: "comments",
+        populate: { path: "author", select: "username" }
+      })
+      .sort({ createdAt: -1 });
+
+    res.json({
+      message: "Posts fetched successfully",
+      posts
+    });
+  } catch (error) {
+    console.error("GET POSTS ERROR:", error);
+    res.status(500).json({ message: "Error fetching posts" });
   }
 };
 
@@ -33,18 +52,26 @@ exports.createPost = async (req, res) => {
 exports.deletePost = async (req, res) => {
   try {
     const postId = req.params.id;
-    const userId = req.session.user.id;
+    const userId = req.user.id;
 
-    await db.query(
-      "DELETE FROM posts WHERE id = ? AND user_id = ?",
-      [postId, userId]
-    );
+    const post = await Post.findById(postId);
 
-    res.redirect("/feed");
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    // Check if user owns post
+    if (post.author.toString() !== userId) {
+      return res.status(403).json({ message: "Not authorized to delete this post" });
+    }
+
+    await post.deleteOne();
+
+    res.json({ message: "Post deleted successfully" });
 
   } catch (err) {
-    console.log("DELETE ERROR:", err);
-    res.status(500).send("Error deleting post");
+    console.error("DELETE ERROR:", err);
+    res.status(500).json({ message: "Error deleting post" });
   }
 };
 
@@ -52,29 +79,73 @@ exports.deletePost = async (req, res) => {
 exports.toggleLike = async (req, res) => {
   try {
     const postId = req.params.id;
-    const userId = req.session.user.id;
+    const userId = req.user.id;
 
-    const [existing] = await db.query(
-      "SELECT * FROM likes WHERE user_id = ? AND post_id = ?",
-      [userId, postId]
-    );
+    const post = await Post.findById(postId);
 
-    if (existing.length > 0) {
-      await db.query(
-        "DELETE FROM likes WHERE user_id = ? AND post_id = ?",
-        [userId, postId]
-      );
-    } else {
-      await db.query(
-        "INSERT INTO likes (user_id, post_id) VALUES (?, ?)",
-        [userId, postId]
-      );
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
     }
 
-    res.redirect("/feed");
+    const likeIndex = post.likes.indexOf(userId);
+
+    if (likeIndex > -1) {
+      // User already liked it, so unlike
+      post.likes.splice(likeIndex, 1);
+    } else {
+      // Like the post
+      post.likes.push(userId);
+    }
+
+    await post.save();
+
+    res.json({
+      message: likeIndex > -1 ? "Post unliked" : "Post liked",
+      likes: post.likes.length
+    });
 
   } catch (err) {
-    console.log("LIKE ERROR:", err);
-    res.status(500).send("Error liking post");
+    console.error("LIKE ERROR:", err);
+    res.status(500).json({ message: "Error toggling like" });
   }
 };
+
+// ================= ADD COMMENT =================
+exports.addComment = async (req, res) => {
+  try {
+    const { text } = req.body;
+    const postId = req.params.id;
+    const userId = req.user.id;
+
+    if (!text || !text.trim()) {
+      return res.status(400).json({ message: "Comment text is required" });
+    }
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    const comment = new Comment({
+      text,
+      author: userId,
+      post: postId
+    });
+
+    await comment.save();
+
+    // Add comment to post's array
+    post.comments.push(comment._id);
+    await post.save();
+
+    res.status(201).json({
+      message: "Comment added successfully",
+      comment
+    });
+
+  } catch (err) {
+    console.error("COMMENT ERROR:", err);
+    res.status(500).json({ message: "Error adding comment" });
+  }
+};
+

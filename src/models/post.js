@@ -1,31 +1,28 @@
-const express = require("express");
-const router = express.Router();
-const multer = require("multer");
+const mongoose = require("mongoose");
 
-const postController = require("../controllers/postController");
-console.log("POST CONTROLLER:", postController);
-
-const isLoggedIn = require("../middlewares/authmiddleware");
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/");
+const postSchema = new mongoose.Schema({
+  content: {
+    type: String,
+    trim: true,
+    default: ""
   },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  }
-});
+  imageUrl: {
+    type: String,
+    default: null
+  },
+  author: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true
+  },
+  likes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  }],
+  comments: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Comment"
+  }]
+}, { timestamps: true });
 
-const upload = multer({ storage });
-
-router.get("/post", isLoggedIn, postController.getCreatePost);
-
-router.post("/post", isLoggedIn, upload.single("image"), postController.createPost);
-
-router.get("/feed", isLoggedIn, postController.getFeed);
-
-router.post("/delete/:id", isLoggedIn, postController.deletePost);
-
-router.post("/like/:id", isLoggedIn, postController.toggleLike);
-
-module.exports=router;
+module.exports = mongoose.model("Post", postSchema);

@@ -1,71 +1,40 @@
-
-console.log("APP IS RUNNING");
-
-require("dotenv").config();
-
-
 const express = require("express");
-const session = require("express-session");
 const path = require("path");
+require("dotenv").config();
+const { connectDb } = require("./src/config/db");
 
 const app = express();
+
+// Connect to MongoDB
+connectDb();
 
 // ---------------------
 // Middleware
 // ---------------------
-
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+// Allow CORS for frontend
+const cors = require("cors");
+app.use(cors());
 
 // Static folder (for uploaded images)
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // ---------------------
-// View Engine
-// ---------------------
-
-app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "src", "views"));
-
-// ---------------------
-// Session
-// ---------------------
-
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "supersecret",
-    resave: false,
-    saveUninitialized: false,
-  })
-);
-
-// Make user available in ALL EJS files
-app.use((req, res, next) => {
-  res.locals.user = req.session.user || null;
-  next();
-});
-
-// ---------------------
 // Routes
 // ---------------------
-
 const authRoutes = require("./src/routes/auth");
 const postRoutes = require("./src/routes/posts");
-const feedRoutes = require("./src/routes/feed");
-const commentRoutes = require("./src/routes/comment");
+// Removed feedRoutes and commentRoutes for now as we transition to API
 
-app.use("/", authRoutes);
-app.use("/", postRoutes);
-app.use("/", feedRoutes);
-app.use("/", commentRoutes);
-
+app.use("/api/auth", authRoutes);
+app.use("/api", postRoutes);
 
 // ---------------------
 // Server
 // ---------------------
-
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+const PORT = 8080; // Hardcoding to avoid any hidden conflicts
+app.listen(PORT, "127.0.0.1", () => {
+  console.log(`Server running on http://127.0.0.1:${PORT}`);
 });

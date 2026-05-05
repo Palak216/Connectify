@@ -1,16 +1,21 @@
-const express = require("express");
-const router = express.Router();
+const mongoose = require("mongoose");
 
-const authMiddleware = require("../middlewares/authmiddleware");
-const {
-  addComment,
-  deleteComment
-} = require("../controllers/commentController");
+const commentSchema = new mongoose.Schema({
+  text: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  author: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true
+  },
+  post: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Post",
+    required: true
+  }
+}, { timestamps: true });
 
-// add comment
-router.post("/:postId", authMiddleware, addComment);
-
-// delete comment
-router.delete("/:commentId", authMiddleware, deleteComment);
-
-module.exports = router;
+module.exports = mongoose.model("Comment", commentSchema);
