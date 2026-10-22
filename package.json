@@ -1,10 +1,11 @@
 {
   "name": "mini-instagram",
   "version": "1.0.0",
-  "description": "",
+  "description": "Mini Instagram / Connectify API",
   "main": "app.js",
   "scripts": {
-    "start": "nodemon app.js"
+    "start": "node app.js",
+    "dev": "node --watch app.js"
   },
   "keywords": [],
   "author": "Palak Agrawal",
