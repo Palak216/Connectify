@@ -5,6 +5,7 @@ import CreatePost from '../components/CreatePost';
 
 const Feed = () => {
   const [posts, setPosts] = useState([]);
+  const [feedMode, setFeedMode] = useState('everyone');
   const [loading, setLoading] = useState(true);
   const [expandedComments, setExpandedComments] = useState({});
   const [commentTexts, setCommentTexts] = useState({});
@@ -22,7 +23,7 @@ const Feed = () => {
 
   const fetchPosts = async () => {
     try {
-      const res = await fetch(`${API_URL}/posts`, {
+      const res = await fetch(`${API_URL}/posts${feedMode === 'following' ? '?feed=following' : ''}`, {
         headers: getAuthHeaders()
       });
       if (res.ok) {
@@ -41,7 +42,7 @@ const Feed = () => {
 
   useEffect(() => {
     fetchPosts();
-  }, []);
+  }, [feedMode]);
 
   const handleLike = async (postId) => {
     try {
@@ -134,6 +135,10 @@ const Feed = () => {
       <div className="feed-layout">
         <div className="main-feed">
           <CreatePost onPostCreated={fetchPosts} />
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '18px' }} role="group" aria-label="Choose feed">
+            <button className={feedMode === 'everyone' ? 'btn btn-primary' : 'btn'} onClick={() => setFeedMode('everyone')}>Everyone</button>
+            <button className={feedMode === 'following' ? 'btn btn-primary' : 'btn'} onClick={() => setFeedMode('following')}>Following</button>
+          </div>
           
           {loading ? (
             <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
