@@ -49,11 +49,11 @@ const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024, files: 1 }
 
 router.get("/posts", isLoggedIn, getAllPosts);
 router.post("/posts", isLoggedIn, (req, res, next) => {
-  if (process.env.NODE_ENV === "production" && !cloudinary.isConfigured) {
-    return res.status(503).json({ message: "Image uploads are not configured on this server" });
-  }
   return upload.single("image")(req, res, (error) => {
     if (error) return res.status(400).json({ message: error.message || "Image upload failed" });
+    if (req.file && process.env.NODE_ENV === "production" && !cloudinary.isConfigured) {
+      return res.status(503).json({ message: "Image uploads are not configured on this server" });
+    }
     return next();
   });
 }, createPost);
