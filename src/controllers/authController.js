@@ -64,7 +64,7 @@ exports.login = async (req, res) => {
       return res.status(500).json({ message: "Authentication is not configured on the server" });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select("+password");
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
