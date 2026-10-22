@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Trash2, Send } from 'lucide-react';
-import { API_URL, getAuthHeaders } from '../config';
+import { API_URL, API_BASE_URL, getAuthHeaders } from '../config';
 import CreatePost from '../components/CreatePost';
 
 const Feed = () => {
@@ -172,7 +172,7 @@ const Feed = () => {
                   
                   {post.imageUrl && (
                     <img 
-                      src={`http://127.0.0.1:8080/${post.imageUrl.replace('\\', '/')}`} 
+                      src={post.imageUrl.startsWith('http') ? post.imageUrl : `${API_BASE_URL}/${post.imageUrl.replace('\\', '/')}`} 
                       alt="Post" 
                       className="post-image" 
                       onError={(e) => { e.target.style.display = 'none'; }}
