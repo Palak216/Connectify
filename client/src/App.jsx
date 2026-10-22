@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Auth from './pages/Auth';
 import Feed from './pages/Feed';
+import Discover from './pages/Discover';
 import Navbar from './components/Navbar';
 
 function App() {
@@ -15,9 +16,13 @@ function App() {
             path="/login" 
             element={!isAuthenticated ? <Auth /> : <Navigate to="/" />} 
           />
-          <Route 
-            path="/" 
-            element={isAuthenticated ? <Feed /> : <Navigate to="/login" />} 
+          <Route
+            path="/"
+            element={isAuthenticated ? <Feed /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/discover"
+            element={isAuthenticated ? <Discover /> : <Navigate to="/login" />}
           />
         </Routes>
       </div>
