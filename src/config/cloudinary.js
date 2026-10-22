@@ -1,25 +1,20 @@
-// const cloudinary = require("cloudinary").v2;
-
-// cloudinary.config({
-//   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-//   api_key: process.env.CLOUDINARY_API_KEY,
-//   api_secret: process.env.CLOUDINARY_API_SECRET
-// });
-
-// module.exports = cloudinary;
-
 const cloudinary = require("cloudinary").v2;
-require("dotenv").config();
 
-try {
-    cloudinary.config({
-        cloud_name: process.env.CLOUD_NAME,
-        api_key: process.env.API_KEY,
-        api_secret: process.env.API_SECRET,
-    });
-} catch(error) {
-    console.log("Error occur while connecting to Cloudinary");
-    console.log(error);
+const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+const apiKey = process.env.CLOUDINARY_API_KEY;
+const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+const isConfigured = Boolean(cloudName && apiKey && apiSecret);
+
+if (isConfigured) {
+  cloudinary.config({
+    cloud_name: cloudName,
+    api_key: apiKey,
+    api_secret: apiSecret,
+    secure: true,
+  });
 }
+
+cloudinary.isConfigured = isConfigured;
 
 module.exports = cloudinary;

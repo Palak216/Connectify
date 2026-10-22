@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Camera, LogOut } from 'lucide-react';
+import { Camera, LogOut, Compass } from 'lucide-react';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -20,6 +20,8 @@ const Navbar = () => {
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <button onClick={() => navigate('/')} className="action-btn">Feed</button>
+          <button onClick={() => navigate('/discover')} className="action-btn"><Compass size={18} /> Discover</button>
           <span style={{ fontWeight: 500 }}>Hello, {username || 'User'}</span>
           <button 
             onClick={handleLogout}

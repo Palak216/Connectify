@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Trash2, Send } from 'lucide-react';
-import { API_URL, getAuthHeaders } from '../config';
+import { API_URL, API_BASE_URL, getAuthHeaders } from '../config';
 import CreatePost from '../components/CreatePost';
 
 const Feed = () => {
   const [posts, setPosts] = useState([]);
+  const [feedMode, setFeedMode] = useState('everyone');
   const [loading, setLoading] = useState(true);
   const [expandedComments, setExpandedComments] = useState({});
   const [commentTexts, setCommentTexts] = useState({});
@@ -22,7 +23,7 @@ const Feed = () => {
 
   const fetchPosts = async () => {
     try {
-      const res = await fetch(`${API_URL}/posts`, {
+      const res = await fetch(`${API_URL}/posts${feedMode === 'following' ? '?feed=following' : ''}`, {
         headers: getAuthHeaders()
       });
       if (res.ok) {
@@ -41,7 +42,7 @@ const Feed = () => {
 
   useEffect(() => {
     fetchPosts();
-  }, []);
+  }, [feedMode]);
 
   const handleLike = async (postId) => {
     try {
@@ -134,6 +135,10 @@ const Feed = () => {
       <div className="feed-layout">
         <div className="main-feed">
           <CreatePost onPostCreated={fetchPosts} />
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '18px' }} role="group" aria-label="Choose feed">
+            <button className={feedMode === 'everyone' ? 'btn btn-primary' : 'btn'} onClick={() => setFeedMode('everyone')}>Everyone</button>
+            <button className={feedMode === 'following' ? 'btn btn-primary' : 'btn'} onClick={() => setFeedMode('following')}>Following</button>
+          </div>
           
           {loading ? (
             <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
@@ -172,7 +177,7 @@ const Feed = () => {
                   
                   {post.imageUrl && (
                     <img 
-                      src={`http://127.0.0.1:8080/${post.imageUrl.replace('\\', '/')}`} 
+                      src={post.imageUrl.startsWith('http') ? post.imageUrl : `${API_BASE_URL}/${post.imageUrl.replace('\\', '/')}`} 
                       alt="Post" 
                       className="post-image" 
                       onError={(e) => { e.target.style.display = 'none'; }}

@@ -1,5 +1,6 @@
 const Post = require("../models/post");
 const Comment = require("../models/comment");
+const User = require("../models/User");
 
 // ================= CREATE POST =================
 exports.createPost = async (req, res) => {
@@ -30,11 +31,18 @@ exports.createPost = async (req, res) => {
 // ================= GET ALL POSTS =================
 exports.getAllPosts = async (req, res) => {
   try {
-    const posts = await Post.find()
-      .populate("author", "username")
+    let filter = {};
+    if (req.query.feed === "following") {
+      const user = await User.findById(req.user.id).select("following");
+      if (!user) return res.status(404).json({ message: "User not found" });
+      filter = { author: { $in: user.following } };
+    }
+
+    const posts = await Post.find(filter)
+      .populate("author", "username profileImageUrl")
       .populate({
         path: "comments",
-        populate: { path: "author", select: "username" }
+        populate: { path: "author", select: "username profileImageUrl" }
       })
       .sort({ createdAt: -1 });
 
