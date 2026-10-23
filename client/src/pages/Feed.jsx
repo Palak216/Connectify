@@ -170,7 +170,7 @@ const Feed = () => {
                     )}
                   </div>
                   
-                  ```jsx
+                  
 {post.imageUrl && (
   <img
     src={
@@ -190,7 +190,7 @@ const Feed = () => {
     }}
   />
 )}
-```
+
                   
                   <div className="post-actions">
                     <button 

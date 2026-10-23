@@ -15,27 +15,8 @@ const {
   addComment,
 } = require("../controllers/postController");
 
-// Create uploads folder if it does not exist
-const uploadDir = path.join(__dirname, "../../uploads");
-fs.mkdirSync(uploadDir, { recursive: true });
+const isProduction = process.env.NODE_ENV === "production";
 
-// Store uploaded images locally
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const filename = `${Date.now()}-${Math.round(
-      Math.random() * 1e9
-    )}${ext}`;
-
-    cb(null, filename);
-  },
-});
-
-// Basic image-type validation
 const allowedMimeTypes = [
   "image/jpeg",
   "image/png",
@@ -43,27 +24,82 @@ const allowedMimeTypes = [
   "image/gif",
 ];
 
+const allowedExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
+
+// Validate image type and extension in both environments.
+const fileFilter = (req, file, cb) => {
+  const ext = path.extname(file.originalname).toLowerCase();
+
+  if (
+    allowedMimeTypes.includes(file.mimetype) &&
+    allowedExtensions.includes(ext)
+  ) {
+    return cb(null, true);
+  }
+
+  return cb(
+    new Error("Only JPG, PNG, WebP, and GIF images are allowed.")
+  );
+};
+
+let storage;
+
+if (isProduction) {
+  // Production: store uploaded images in Cloudinary.
+  const cloudinary = require("../config/cloudinary");
+  const { CloudinaryStorage } = require("multer-storage-cloudinary");
+
+  const requiredCloudinaryVars = [
+    "CLOUDINARY_CLOUD_NAME",
+    "CLOUDINARY_API_KEY",
+    "CLOUDINARY_API_SECRET",
+  ];
+
+  const missingVars = requiredCloudinaryVars.filter(
+    (name) => !process.env[name]
+  );
+
+  if (missingVars.length > 0) {
+    throw new Error(
+      `Missing required Cloudinary environment variables: ${missingVars.join(", ")}`
+    );
+  }
+
+  storage = new CloudinaryStorage({
+    cloudinary,
+    params: {
+      folder: "connectify/posts",
+      allowed_formats: ["jpg", "jpeg", "png", "webp", "gif"],
+    },
+  });
+} else {
+  // Local development: preserve disk-based uploads.
+  const uploadDir = path.join(__dirname, "../../uploads");
+  fs.mkdirSync(uploadDir, { recursive: true });
+
+  storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, uploadDir);
+    },
+
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      const filename = `${Date.now()}-${Math.round(
+        Math.random() * 1e9
+      )}${ext}`;
+
+      cb(null, filename);
+    },
+  });
+}
+
 const upload = multer({
   storage,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5 MB maximum
+    fileSize: 5 * 1024 * 1024,
     files: 1,
   },
-  fileFilter: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const allowedExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
-
-    if (
-      allowedMimeTypes.includes(file.mimetype) &&
-      allowedExtensions.includes(ext)
-    ) {
-      return cb(null, true);
-    }
-
-    return cb(
-      new Error("Only JPG, PNG, WebP, and GIF images are allowed.")
-    );
-  },
+  fileFilter,
 });
 
 // Get all posts

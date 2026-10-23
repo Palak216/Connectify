@@ -15,8 +15,10 @@ exports.createPost = async (req, res) => {
 
     const trimmedContent = content?.trim() || "";
     const imageUrl = req.file
-      ? `/uploads/${req.file.filename}`
-      : null;
+  ? req.file.path.startsWith("http")
+    ? req.file.path
+    : `/uploads/${req.file.filename}`
+  : null;
 
     if (!trimmedContent && !imageUrl) {
       return res.status(400).json({

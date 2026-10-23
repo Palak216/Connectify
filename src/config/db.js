@@ -5,13 +5,20 @@ exports.connectDb = async () => {
   try {
     const mongoUrl = process.env.MONGODB_URL;
     const dbName = process.env.DB_NAME;
+    const isProduction = process.env.NODE_ENV === "production";
 
     if (!mongoUrl) {
       throw new Error("MONGODB_URL is missing from environment variables.");
     }
 
-    if (!dbName || dbName !== "mini_instagram") {
-      throw new Error("DB_NAME must be set to mini_instagram.");
+    const expectedDbName = isProduction ? "test" : "mini_instagram";
+
+    if (dbName !== expectedDbName) {
+      throw new Error(
+        `DB_NAME must be "${expectedDbName}" in ${
+          isProduction ? "production" : "development"
+        } mode.`
+      );
     }
 
     await mongoose.connect(mongoUrl, {
@@ -20,9 +27,9 @@ exports.connectDb = async () => {
       autoSelectFamily: false,
     });
 
-    console.log(`DB Connected Successfully: ${dbName}`);
+    console.log(`Database connected successfully: ${dbName}`);
   } catch (error) {
-    console.error("DB Connection Failed:", error.message);
+    console.error("Database connection failed:", error.message);
     throw error;
   }
 };
