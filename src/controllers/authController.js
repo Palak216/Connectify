@@ -4,6 +4,10 @@ const User = require("../models/User");
 
 exports.signup = async (req, res) => {
   try {
+    if (!process.env.JWT_SECRET) {
+  console.error("JWT_SECRET is missing.");
+  return res.status(500).json({ message: "Server configuration error" });
+}
     const { username, email, password } = req.body;
 
     // Check if user exists
@@ -26,7 +30,11 @@ exports.signup = async (req, res) => {
     await newUser.save();
 
     // Generate token
-    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET || "supersecretjwt", { expiresIn: "7d" });
+    const token = jwt.sign(
+  { id: newUser._id },
+  process.env.JWT_SECRET,
+  { expiresIn: "7d" }
+);
 
     res.status(201).json({
       message: "User registered successfully",
@@ -57,7 +65,11 @@ exports.login = async (req, res) => {
     }
 
     // Generate token
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "supersecretjwt", { expiresIn: "7d" });
+    const token = jwt.sign(
+  { id: user._id },
+  process.env.JWT_SECRET,
+  { expiresIn: "7d" }
+);
 
     res.json({
       message: "Login successful",

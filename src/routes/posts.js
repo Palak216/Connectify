@@ -1,54 +1,107 @@
+
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const fs = require("fs");
+const path = require("path");
 
-const cloudinary = require("../config/cloudinary");
 const isLoggedIn = require("../middlewares/authmiddleware");
 
-const { 
-  createPost, 
+const {
+  createPost,
   getAllPosts,
   deletePost,
   toggleLike,
-  addComment
+  addComment,
 } = require("../controllers/postController");
 
-// Try to use Cloudinary storage if configured, fallback to disk
-let upload;
-try {
-  const storage = new CloudinaryStorage({
-    cloudinary,
-    params: {
-      folder: "mini-instagram",
-      allowed_formats: ["jpg", "png", "jpeg"],
-    },
-  });
-  upload = multer({ storage });
-} catch (e) {
-  // Fallback to local storage
-  const storage = multer.diskStorage({
-    destination: function (req, file, cb) { cb(null, "uploads/"); },
-    filename: function (req, file, cb) { cb(null, Date.now() + "-" + file.originalname); }
-  });
-  upload = multer({ storage });
-}
+// Create uploads folder if it does not exist
+const uploadDir = path.join(__dirname, "../../uploads");
+fs.mkdirSync(uploadDir, { recursive: true });
 
-// ================= ROUTES =================
+// Store uploaded images locally
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
 
-// Get all posts (Feed)
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const filename = `${Date.now()}-${Math.round(
+      Math.random() * 1e9
+    )}${ext}`;
+
+    cb(null, filename);
+  },
+});
+
+// Basic image-type validation
+const allowedMimeTypes = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+];
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5 MB maximum
+    files: 1,
+  },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
+
+    if (
+      allowedMimeTypes.includes(file.mimetype) &&
+      allowedExtensions.includes(ext)
+    ) {
+      return cb(null, true);
+    }
+
+    return cb(
+      new Error("Only JPG, PNG, WebP, and GIF images are allowed.")
+    );
+  },
+});
+
+// Get all posts
 router.get("/posts", isLoggedIn, getAllPosts);
 
-// Create post
+// Create a post with an optional image
 router.post("/posts", isLoggedIn, upload.single("image"), createPost);
 
-// Delete post
+// Delete a post
 router.delete("/posts/:id", isLoggedIn, deletePost);
 
-// Toggle Like
+// Like or unlike a post
 router.post("/posts/:id/like", isLoggedIn, toggleLike);
 
-// Add Comment
+// Add a comment
 router.post("/posts/:id/comments", isLoggedIn, addComment);
+
+// Handle upload errors with JSON responses
+router.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({
+        message: "Image must be 5 MB or smaller.",
+      });
+    }
+
+    return res.status(400).json({
+      message: "Image upload failed. Please try again.",
+    });
+  }
+
+  if (err) {
+    return res.status(400).json({
+      message: err.message || "Invalid image upload.",
+    });
+  }
+
+  next();
+});
 
 module.exports = router;

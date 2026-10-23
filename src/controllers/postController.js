@@ -1,3 +1,5 @@
+
+const mongoose = require("mongoose");
 const Post = require("../models/post");
 const Comment = require("../models/comment");
 
@@ -5,25 +7,38 @@ const Comment = require("../models/comment");
 exports.createPost = async (req, res) => {
   try {
     const { content } = req.body;
-    const imageUrl = req.file ? req.file.path : null;
     const userId = req.user.id;
 
+    if (content !== undefined && typeof content !== "string") {
+      return res.status(400).json({ message: "Invalid post content" });
+    }
+
+    const trimmedContent = content?.trim() || "";
+    const imageUrl = req.file
+      ? `/uploads/${req.file.filename}`
+      : null;
+
+    if (!trimmedContent && !imageUrl) {
+      return res.status(400).json({
+        message: "Post content or an image is required",
+      });
+    }
+
     const newPost = new Post({
-      content,
+      content: trimmedContent,
       imageUrl,
-      author: userId
+      author: userId,
     });
 
     await newPost.save();
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Post created successfully",
-      post: newPost
+      post: newPost,
     });
-
   } catch (error) {
-    console.error("CREATE POST ERROR:", error);
-    res.status(500).json({ message: "Error creating post" });
+    console.error("CREATE POST ERROR:", error.message);
+    return res.status(500).json({ message: "Error creating post" });
   }
 };
 
@@ -34,25 +49,29 @@ exports.getAllPosts = async (req, res) => {
       .populate("author", "username")
       .populate({
         path: "comments",
-        populate: { path: "author", select: "username" }
+        populate: { path: "author", select: "username" },
       })
       .sort({ createdAt: -1 });
 
-    res.json({
+    return res.json({
       message: "Posts fetched successfully",
-      posts
+      posts,
     });
   } catch (error) {
-    console.error("GET POSTS ERROR:", error);
-    res.status(500).json({ message: "Error fetching posts" });
+    console.error("GET POSTS ERROR:", error.message);
+    return res.status(500).json({ message: "Error fetching posts" });
   }
 };
 
 // ================= DELETE POST =================
 exports.deletePost = async (req, res) => {
   try {
-    const postId = req.params.id;
+    const { id: postId } = req.params;
     const userId = req.user.id;
+
+    if (!mongoose.isValidObjectId(postId)) {
+      return res.status(400).json({ message: "Invalid post ID" });
+    }
 
     const post = await Post.findById(postId);
 
@@ -60,26 +79,30 @@ exports.deletePost = async (req, res) => {
       return res.status(404).json({ message: "Post not found" });
     }
 
-    // Check if user owns post
-    if (post.author.toString() !== userId) {
-      return res.status(403).json({ message: "Not authorized to delete this post" });
+    if (String(post.author) !== String(userId)) {
+      return res.status(403).json({
+        message: "Not authorized to delete this post",
+      });
     }
 
     await post.deleteOne();
 
-    res.json({ message: "Post deleted successfully" });
-
-  } catch (err) {
-    console.error("DELETE ERROR:", err);
-    res.status(500).json({ message: "Error deleting post" });
+    return res.json({ message: "Post deleted successfully" });
+  } catch (error) {
+    console.error("DELETE ERROR:", error.message);
+    return res.status(500).json({ message: "Error deleting post" });
   }
 };
 
 // ================= TOGGLE LIKE =================
 exports.toggleLike = async (req, res) => {
   try {
-    const postId = req.params.id;
+    const { id: postId } = req.params;
     const userId = req.user.id;
+
+    if (!mongoose.isValidObjectId(postId)) {
+      return res.status(400).json({ message: "Invalid post ID" });
+    }
 
     const post = await Post.findById(postId);
 
@@ -87,65 +110,68 @@ exports.toggleLike = async (req, res) => {
       return res.status(404).json({ message: "Post not found" });
     }
 
-    const likeIndex = post.likes.indexOf(userId);
+    const likeIndex = post.likes.findIndex(
+      (id) => String(id) === String(userId)
+    );
 
-    if (likeIndex > -1) {
-      // User already liked it, so unlike
+    if (likeIndex >= 0) {
       post.likes.splice(likeIndex, 1);
     } else {
-      // Like the post
       post.likes.push(userId);
     }
 
     await post.save();
 
-    res.json({
-      message: likeIndex > -1 ? "Post unliked" : "Post liked",
-      likes: post.likes.length
+    return res.json({
+      message: likeIndex >= 0 ? "Post unliked" : "Post liked",
+      likes: post.likes.length,
     });
-
-  } catch (err) {
-    console.error("LIKE ERROR:", err);
-    res.status(500).json({ message: "Error toggling like" });
+  } catch (error) {
+    console.error("LIKE ERROR:", error.message);
+    return res.status(500).json({ message: "Error toggling like" });
   }
 };
 
 // ================= ADD COMMENT =================
 exports.addComment = async (req, res) => {
   try {
+    const { id: postId } = req.params;
     const { text } = req.body;
-    const postId = req.params.id;
     const userId = req.user.id;
 
-    if (!text || !text.trim()) {
-      return res.status(400).json({ message: "Comment text is required" });
+    if (!mongoose.isValidObjectId(postId)) {
+      return res.status(400).json({ message: "Invalid post ID" });
+    }
+
+    if (typeof text !== "string" || !text.trim()) {
+      return res.status(400).json({
+        message: "Comment text is required",
+      });
     }
 
     const post = await Post.findById(postId);
+
     if (!post) {
       return res.status(404).json({ message: "Post not found" });
     }
 
     const comment = new Comment({
-      text,
+      text: text.trim(),
       author: userId,
-      post: postId
+      post: postId,
     });
 
     await comment.save();
 
-    // Add comment to post's array
     post.comments.push(comment._id);
     await post.save();
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Comment added successfully",
-      comment
+      comment,
     });
-
-  } catch (err) {
-    console.error("COMMENT ERROR:", err);
-    res.status(500).json({ message: "Error adding comment" });
+  } catch (error) {
+    console.error("COMMENT ERROR:", error.message);
+    return res.status(500).json({ message: "Error adding comment" });
   }
 };
-

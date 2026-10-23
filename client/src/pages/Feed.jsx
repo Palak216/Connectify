@@ -170,14 +170,27 @@ const Feed = () => {
                     )}
                   </div>
                   
-                  {post.imageUrl && (
-                    <img 
-                      src={`http://127.0.0.1:8080/${post.imageUrl.replace('\\', '/')}`} 
-                      alt="Post" 
-                      className="post-image" 
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                    />
-                  )}
+                  ```jsx
+{post.imageUrl && (
+  <img
+    src={
+      post.imageUrl.startsWith("http")
+        ? post.imageUrl
+        : `http://127.0.0.1:8080/${
+            post.imageUrl
+              .replace(/\\/g, "/")
+              .replace(/^.*\/uploads\//, "uploads/")
+              .replace(/^\/+/, "")
+          }`
+    }
+    alt="Post"
+    className="post-image"
+    onError={(e) => {
+      console.error("Image failed to load:", e.currentTarget.src);
+    }}
+  />
+)}
+```
                   
                   <div className="post-actions">
                     <button 
