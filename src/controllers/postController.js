@@ -48,17 +48,28 @@ exports.createPost = async (req, res) => {
 // ================= GET ALL POSTS =================
 exports.getAllPosts = async (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const skip = (page - 1) * limit;
+
+    const totalPosts = await Post.countDocuments();
     const posts = await Post.find()
       .populate("author", "username")
       .populate({
         path: "comments",
         populate: { path: "author", select: "username" },
       })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     return res.json({
       message: "Posts fetched successfully",
       posts,
+      page,
+      limit,
+      totalPages: Math.ceil(totalPosts / limit),
+      totalPosts,
     });
   } catch (error) {
     console.error("GET POSTS ERROR:", error.message);
