@@ -82,3 +82,9 @@ exports.login = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+exports.logout = async (req, res) => {
+  return res.status(200).json({
+    message: "Logged out successfully",
+  });
+};

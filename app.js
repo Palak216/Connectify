@@ -57,6 +57,17 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api", postRoutes);
 
+// Global error handler
+app.use((err, req, res, next) => {
+  if (err.message === "Origin not allowed by CORS") {
+    return res.status(403).json({ message: "Origin not allowed by CORS" });
+  }
+  console.error("Unhandled error:", err.message);
+  return res.status(err.status || 500).json({
+    message: err.message || "Internal server error",
+  });
+});
+
 const PORT = process.env.PORT || 8080;
 
 async function startServer() {
