@@ -81,7 +81,7 @@ const handleLogout = async () => {
       <div className="glass-panel animate-fade-in" style={{ width: '100%', maxWidth: '400px', padding: '40px' }}>
         
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <h1 className="logo" style={{ justifyContent: 'center', marginBottom: '10px' }}>MiniGram</h1>
+          <h1 className="logo" style={{ justifyContent: 'center', marginBottom: '10px' }}>Connectify</h1>
           <p style={{ color: 'var(--text-muted)' }}>
             {isLogin ? 'Welcome back! Please login.' : 'Create an account to join.'}
           </p>
