@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-     "dev": "nodemon app.js"
+    "dev": "nodemon app.js"
   },
   "keywords": [],
   "author": "Palak Agrawal",
@@ -19,7 +19,8 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.5.0",
     "multer": "^2.0.2",
-    "multer-storage-cloudinary": "^4.0.0"
+    "multer-storage-cloudinary": "^4.0.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
