@@ -127,7 +127,7 @@ exports.toggleLike = async (req, res) => {
     const unlikedPost = await Post.findOneAndUpdate(
       { _id: postId, likes: userId },
       { $pull: { likes: userId } },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (unlikedPost) {
@@ -141,7 +141,7 @@ exports.toggleLike = async (req, res) => {
     const likedPost = await Post.findOneAndUpdate(
       { _id: postId },
       { $addToSet: { likes: userId } },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     return res.json({
