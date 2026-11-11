@@ -106,27 +106,35 @@ exports.toggleLike = async (req, res) => {
       return res.status(400).json({ message: "Invalid post ID" });
     }
 
-    const post = await Post.findById(postId);
-
-    if (!post) {
+    const postExists = await Post.findById(postId);
+    if (!postExists) {
       return res.status(404).json({ message: "Post not found" });
     }
 
-    const likeIndex = post.likes.findIndex(
-      (id) => String(id) === String(userId)
+    // Atomically unlike if user already liked
+    const unlikedPost = await Post.findOneAndUpdate(
+      { _id: postId, likes: userId },
+      { $pull: { likes: userId } },
+      { new: true }
     );
 
-    if (likeIndex >= 0) {
-      post.likes.splice(likeIndex, 1);
-    } else {
-      post.likes.push(userId);
+    if (unlikedPost) {
+      return res.json({
+        message: "Post unliked",
+        likes: unlikedPost.likes.length,
+      });
     }
 
-    await post.save();
+    // Otherwise atomically add user to likes ($addToSet guarantees uniqueness)
+    const likedPost = await Post.findOneAndUpdate(
+      { _id: postId },
+      { $addToSet: { likes: userId } },
+      { new: true }
+    );
 
     return res.json({
-      message: likeIndex >= 0 ? "Post unliked" : "Post liked",
-      likes: post.likes.length,
+      message: "Post liked",
+      likes: likedPost.likes.length,
     });
   } catch (error) {
     console.error("LIKE ERROR:", error.message);
