@@ -1,6 +1,6 @@
-# 📸 Mini Instagram — Connectify
+# Connectify
 
-A social media web application inspired by Instagram, built to provide a platform for users to register, log in, share posts, and interact with content.
+A social media web application built with Node.js, Express, and MongoDB.
 
 ## 🚀 Features
 
