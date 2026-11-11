@@ -1,15 +1,18 @@
 
 const express = require("express");
+const http = require("http");
 const path = require("path");
 const cors = require("cors");
 require("dotenv").config();
 
 const { connectDb } = require("./src/config/db");
+const { initSocket } = require("./src/socket");
 
 const authRoutes = require("./src/routes/auth");
 const postRoutes = require("./src/routes/posts");
 const userRoutes = require("./src/routes/users");
 const commentRoutes = require("./src/routes/comments");
+const notificationRoutes = require("./src/routes/notifications");
 
 const app = express();
 
@@ -60,6 +63,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api", postRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/comments", commentRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
@@ -74,11 +78,14 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 8080;
 
+const server = http.createServer(app);
+initSocket(server, allowedOrigins);
+
 async function startServer() {
   try {
     await connectDb();
 
-    app.listen(PORT, "0.0.0.0", () => {
+    server.listen(PORT, "0.0.0.0", () => {
       console.log(`Server listening on port ${PORT}`);
       console.log("Database connected successfully.");
     });
@@ -92,4 +99,5 @@ if (require.main === module) {
   startServer();
 }
 
+app.server = server;
 module.exports = app;
