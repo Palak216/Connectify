@@ -3,6 +3,8 @@ const mongoose = require("mongoose");
 const Post = require("../models/post");
 const Comment = require("../models/comment");
 const Follow = require("../models/follow");
+const Notification = require("../models/notification");
+const { emitNotification } = require("../socket");
 
 // ================= CREATE POST =================
 exports.createPost = async (req, res) => {
@@ -144,6 +146,23 @@ exports.toggleLike = async (req, res) => {
       { returnDocument: "after" }
     );
 
+    // Create and emit notification if actor is not the post author
+    if (String(likedPost.author) !== String(userId)) {
+      try {
+        const notification = new Notification({
+          recipient: likedPost.author,
+          actor: userId,
+          type: "like",
+          post: postId,
+        });
+        await notification.save();
+        await notification.populate("actor", "username");
+        emitNotification(likedPost.author, notification);
+      } catch (notifErr) {
+        console.error("NOTIFICATION ERROR:", notifErr.message);
+      }
+    }
+
     return res.json({
       message: "Post liked",
       likes: likedPost.likes.length,
@@ -187,6 +206,23 @@ exports.addComment = async (req, res) => {
 
     post.comments.push(comment._id);
     await post.save();
+
+    // Create and emit notification if actor is not the post author
+    if (String(post.author) !== String(userId)) {
+      try {
+        const notification = new Notification({
+          recipient: post.author,
+          actor: userId,
+          type: "comment",
+          post: postId,
+        });
+        await notification.save();
+        await notification.populate("actor", "username");
+        emitNotification(post.author, notification);
+      } catch (notifErr) {
+        console.error("NOTIFICATION ERROR:", notifErr.message);
+      }
+    }
 
     return res.status(201).json({
       message: "Comment added successfully",

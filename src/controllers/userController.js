@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const User = require("../models/User");
 const Follow = require("../models/follow");
+const Notification = require("../models/notification");
+const { emitNotification } = require("../socket");
 
 // ================= FOLLOW USER =================
 exports.followUser = async (req, res) => {
@@ -35,6 +37,22 @@ exports.followUser = async (req, res) => {
       following: targetUserId,
     });
     await follow.save();
+
+    // Create and emit notification if actor is not recipient
+    if (String(currentUserId) !== String(targetUserId)) {
+      try {
+        const notification = new Notification({
+          recipient: targetUserId,
+          actor: currentUserId,
+          type: "follow",
+        });
+        await notification.save();
+        await notification.populate("actor", "username");
+        emitNotification(targetUserId, notification);
+      } catch (notifErr) {
+        console.error("NOTIFICATION ERROR:", notifErr.message);
+      }
+    }
 
     return res.status(201).json({
       message: "Successfully followed user",

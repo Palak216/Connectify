@@ -75,6 +75,12 @@ const followUserParamSchema = z.object({
   }),
 });
 
+const notificationIdParamSchema = z.object({
+  params: z.object({
+    id: objectIdSchema,
+  }),
+});
+
 module.exports = {
   objectIdSchema,
   signupSchema,
@@ -84,4 +90,5 @@ module.exports = {
   addCommentSchema,
   commentIdParamSchema,
   followUserParamSchema,
+  notificationIdParamSchema,
 };
