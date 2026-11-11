@@ -10,7 +10,12 @@ const {
   toggleLike,
   addComment,
   getComments,
+  getFeed,
 } = require("../controllers/postController");
+
+// Feed for followed users (cursor-based pagination)
+router.get("/feed", isLoggedIn, getFeed);
+router.get("/posts/feed", isLoggedIn, getFeed);
 
 // Get all posts
 router.get("/posts", isLoggedIn, getAllPosts);
