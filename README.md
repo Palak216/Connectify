@@ -1,146 +1,157 @@
 # Connectify
 
-A social media web application built with Node.js, Express, and MongoDB.
+Connectify is a full-stack social media application built with Node.js, Express, MongoDB, and React. It allows users to register, log in, create posts with optional image uploads, like posts, and leave comments.
 
-## 🚀 Features
+---
 
-- 🔐 **User Authentication** — User registration and login.
-- 📝 **Post Management** — Create and manage posts.
-- 🖼️ **Image Uploads** — Image handling with Cloudinary and Multer.
-- 👤 **User Accounts** — User-related functionality.
-- 🌐 **REST API** — Backend endpoints built with Express.js.
-- 🗄️ **Database Integration** — MongoDB with Mongoose.
-- 🔒 **Password Security** — Password hashing using bcrypt.
-- ⚙️ **Environment Configuration** — Sensitive configuration stored in environment variables.
+## 🌐 Live Demo
+
+- **Live Application**: *[Add your live deployment link here]*
+- **Repository**: [https://github.com/Palak216/mini-instagram-backend](https://github.com/Palak216/mini-instagram-backend)
+
+---
 
 ## 🛠️ Tech Stack
 
-**Backend**
-- Node.js
-- Express.js
-- MongoDB
-- Mongoose
-- EJS
+### Backend
+- **Runtime**: Node.js
+- **Framework**: Express.js
+- **Database**: MongoDB with Mongoose ODM
+- **Authentication**: Stateless JSON Web Tokens (`jsonwebtoken`)
+- **Password Hashing**: `bcryptjs`
+- **File Uploads**: Multer with disk storage (development) and Cloudinary via `multer-storage-cloudinary` (production)
+- **Security & Utilities**: CORS, dotenv
 
-**Libraries and Tools**
-- bcrypt / bcryptjs
-- JSON Web Token (JWT)
-- Express Session
-- Multer
-- Cloudinary
-- dotenv
-- CORS
-- Cookie Parser
+### Frontend
+- **Framework**: React 19 with Vite
+- **Routing**: React Router v7
+- **Icons**: Lucide React
+
+---
 
 ## 📁 Project Structure
 
 ```text
-mini-instagram-backend/
-├── client/
-├── src/
+Connectify/
+├── client/                         # React frontend client
+│   ├── public/
+│   ├── src/
+│   │   ├── components/             # Navbar, CreatePost
+│   │   ├── pages/                  # Auth, Feed
+│   │   ├── App.jsx
+│   │   └── config.js
+│   ├── index.html
+│   ├── package.json
+│   └── vite.config.js
+├── src/                            # Express backend source
 │   ├── config/
-│   │   └── db.js
+│   │   ├── cloudinary.js           # Cloudinary configuration
+│   │   └── db.js                   # Mongoose database connection
+│   ├── controllers/
+│   │   ├── authController.js       # Signup, login, and logout handlers
+│   │   └── postController.js       # Post CRUD, likes, comments handlers
+│   ├── middlewares/
+│   │   ├── authmiddleware.js       # JWT authentication verification
+│   │   └── upload.js               # Multer image storage and validation
+│   ├── models/
+│   │   ├── comment.js              # Comment schema
+│   │   ├── post.js                 # Post schema
+│   │   └── User.js                 # User schema
 │   └── routes/
-│       ├── auth.js
-│       └── posts.js
-├── uploads/
-├── app.js
-├── index.js
-├── package.json
-├── package-lock.json
-├── .env.example
+│       ├── auth.js                 # Auth route definitions
+│       └── posts.js                # Post route definitions
+├── app.js                          # Express application setup and entry point
+├── package.json                    # Backend dependencies and scripts
+├── .env.example                    # Environment variable template
 └── README.md
 ```
 
-*Note: The exact folders and files may vary as the project evolves.*
+---
 
-## ⚙️ Getting Started
+## ⚙️ Environment Variables
+
+Copy `.env.example` to `.env` in the root directory:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Required | Description | Example |
+|---|---|---|---|
+| `PORT` | Optional | Port for the backend server (defaults to 8080) | `8080` |
+| `NODE_ENV` | Optional | Runtime mode (`development` or `production`) | `development` |
+| `FRONTEND_URL` | Optional | Allowed CORS origin for client requests | `http://localhost:5173` |
+| `MONGODB_URL` | **Yes** | MongoDB connection URI | `mongodb://localhost:27017/connectify` |
+| `DB_NAME` | Optional | Target MongoDB database name | `connectify` |
+| `JWT_SECRET` | **Yes** | Secret key for signing and verifying JWTs | `your_jwt_secret_key` |
+| `CLOUDINARY_CLOUD_NAME`| Prod only| Cloudinary cloud name for image uploads | `your_cloud_name` |
+| `CLOUDINARY_API_KEY`   | Prod only| Cloudinary API key | `your_api_key` |
+| `CLOUDINARY_API_SECRET`| Prod only| Cloudinary API secret | `your_api_secret` |
+
+---
+
+## 🚀 Getting Started
 
 ### 1. Prerequisites
+- **Node.js** (v18+ recommended)
+- **MongoDB** running locally or a MongoDB Atlas connection string
 
-Install the following before running the project:
-
-- [Node.js](https://nodejs.org/)
-- npm (included with Node.js)
-- [MongoDB](https://www.mongodb.com/) — local installation or MongoDB Atlas account
-- A Cloudinary account if you use Cloudinary image uploads
-
-### 2. Clone the Repository
+### 2. Backend Setup
 
 ```bash
+# Clone the repository
 git clone https://github.com/Palak216/mini-instagram-backend.git
 cd mini-instagram-backend
-```
 
-### 3. Install Dependencies
-
-```bash
+# Install backend dependencies
 npm install
-```
 
-### 4. Configure Environment Variables
+# Configure environment variables
+cp .env.example .env
+# Edit .env with your MONGODB_URL and JWT_SECRET
 
-Create a `.env` file in the root directory and add the variables required by your application.
-
-For example:
-
-```env
-PORT=8080
-MONGODB_URL=your_mongodb_connection_string
-```
-
-Add any additional variables required by your authentication and Cloudinary configuration. Check `.env.example` for the exact variable names expected by your code.
-
-**Important:** Never commit your real `.env` file, database credentials, API keys, or other secrets to GitHub.
-
-### 5. Run the Application
-
-```bash
+# Start backend server
 npm start
 ```
+The backend starts at `http://localhost:8080`.
 
-The backend is configured to run locally at:
+### 3. Frontend Setup
 
-```text
-http://127.0.0.1:8080
+```bash
+# From the project root, navigate to the client folder
+cd client
+
+# Install frontend dependencies
+npm install
+
+# Start Vite dev server
+npm run dev
 ```
+The client runs at `http://localhost:5173`.
 
-Make sure your database is accessible and the environment variables are configured correctly before starting the server.
+---
 
-## 🔌 API Routes
+## 🔌 API Endpoints
 
-The application currently mounts these route groups:
+All endpoints are prefixed with `/api` (except `/health`). Protected endpoints require the `Authorization: Bearer <token>` header.
 
-| Route Prefix | Purpose |
-|---|---|
-| `/api/auth` | Authentication-related endpoints |
-| `/api` | Post-related endpoints |
+| Method | Endpoint | Auth Required | Purpose |
+|---|---|---|---|
+| `GET` | `/health` | No | Health check endpoint |
+| `POST` | `/api/auth/signup` | No | Register a new user |
+| `POST` | `/api/auth/login` | No | Authenticate user and receive JWT token |
+| `POST` | `/api/auth/logout` | **Yes** | Log out current user session |
+| `GET` | `/api/posts` | **Yes** | Fetch all posts sorted newest first |
+| `POST` | `/api/posts` | **Yes** | Create a post (optional multipart `image`, 5 MB max) |
+| `DELETE` | `/api/posts/:id` | **Yes** | Delete a post by ID (author only) |
+| `POST` | `/api/posts/:id/like` | **Yes** | Toggle like on a post |
+| `POST` | `/api/posts/:id/comments` | **Yes** | Add a comment to a post |
 
-The exact endpoints and supported HTTP methods depend on the route definitions in the source code.
+---
 
-## 🔐 Security Notes
+## 🔒 Security Measures
 
-- Keep database credentials and API keys private.
-- Use strong passwords and secure password hashing.
-- Validate and sanitize user input.
-- Restrict file uploads by file type and size.
-- Configure CORS appropriately for your deployment environment.
-- Use HTTPS and secure cookie settings in production.
-
-
-
-## 🤝 Contributing
-
-Contributions, suggestions, and bug reports are welcome.
-
-1. Fork the repository.
-2. Create a feature branch.
-3. Make your changes.
-4. Commit your changes.
-5. Open a pull request.
-
-## 👩‍💻 Author
-
-**Palak Agrawal**
-
-GitHub: [@Palak216](https://github.com/Palak216)
+- **Password Protection**: Passwords are hashed with `bcryptjs` using a salt work factor of 10 prior to storage.
+- **Stateless Authentication**: Protected API endpoints enforce JWT signature verification via Bearer token authorization headers.
+- **Upload Restrictions**: Multer restricts image uploads to a maximum size of 5 MB and verifies MIME types and extensions (`.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`).
+- **Resource Authorization**: Deletion of posts strictly verifies that the authenticated user (`req.user.id`) matches the post's author ID.
