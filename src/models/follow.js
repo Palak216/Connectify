@@ -18,5 +18,7 @@ const followSchema = new mongoose.Schema(
 
 // Prevent duplicate follows at database level
 followSchema.index({ follower: 1, following: 1 }, { unique: true });
+// Optimize looking up a user's followers
+followSchema.index({ following: 1 });
 
 module.exports = mongoose.model("Follow", followSchema);
