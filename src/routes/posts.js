@@ -9,6 +9,7 @@ const {
   deletePost,
   toggleLike,
   addComment,
+  getComments,
 } = require("../controllers/postController");
 
 // Get all posts
@@ -27,6 +28,9 @@ router.delete("/posts/:id", isLoggedIn, deletePost);
 
 // Like or unlike a post
 router.post("/posts/:id/like", isLoggedIn, toggleLike);
+
+// Get paginated comments for a post
+router.get("/posts/:id/comments", isLoggedIn, getComments);
 
 // Add a comment
 router.post("/posts/:id/comments", isLoggedIn, addComment);

@@ -185,3 +185,73 @@ exports.addComment = async (req, res) => {
     return res.status(500).json({ message: "Error adding comment" });
   }
 };
+
+// ================= GET COMMENTS (PAGINATED) =================
+exports.getComments = async (req, res) => {
+  try {
+    const { id: postId } = req.params;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const skip = (page - 1) * limit;
+
+    if (!mongoose.isValidObjectId(postId)) {
+      return res.status(400).json({ message: "Invalid post ID" });
+    }
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    const totalComments = await Comment.countDocuments({ post: postId });
+    const comments = await Comment.find({ post: postId })
+      .populate("author", "username")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    return res.json({
+      comments,
+      page,
+      limit,
+      totalPages: Math.ceil(totalComments / limit),
+      totalComments,
+    });
+  } catch (error) {
+    console.error("GET COMMENTS ERROR:", error.message);
+    return res.status(500).json({ message: "Error fetching comments" });
+  }
+};
+
+// ================= DELETE COMMENT (AUTHOR ONLY) =================
+exports.deleteComment = async (req, res) => {
+  try {
+    const { id: commentId } = req.params;
+    const userId = req.user.id;
+
+    if (!mongoose.isValidObjectId(commentId)) {
+      return res.status(400).json({ message: "Invalid comment ID" });
+    }
+
+    const comment = await Comment.findById(commentId);
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+
+    if (String(comment.author) !== String(userId)) {
+      return res.status(403).json({
+        message: "Not authorized to delete this comment",
+      });
+    }
+
+    await comment.deleteOne();
+    await Post.findByIdAndUpdate(comment.post, {
+      $pull: { comments: comment._id },
+    });
+
+    return res.json({ message: "Comment deleted successfully" });
+  } catch (error) {
+    console.error("DELETE COMMENT ERROR:", error.message);
+    return res.status(500).json({ message: "Error deleting comment" });
+  }
+};

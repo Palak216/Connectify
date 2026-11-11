@@ -9,6 +9,7 @@ const { connectDb } = require("./src/config/db");
 const authRoutes = require("./src/routes/auth");
 const postRoutes = require("./src/routes/posts");
 const userRoutes = require("./src/routes/users");
+const commentRoutes = require("./src/routes/comments");
 
 const app = express();
 
@@ -58,6 +59,7 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api", postRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/comments", commentRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
