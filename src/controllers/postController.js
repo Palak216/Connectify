@@ -2,6 +2,9 @@
 const mongoose = require("mongoose");
 const Post = require("../models/post");
 const Comment = require("../models/comment");
+const Follow = require("../models/follow");
+const Notification = require("../models/notification");
+const { emitNotification } = require("../socket");
 
 // ================= CREATE POST =================
 exports.createPost = async (req, res) => {
@@ -47,17 +50,28 @@ exports.createPost = async (req, res) => {
 // ================= GET ALL POSTS =================
 exports.getAllPosts = async (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const skip = (page - 1) * limit;
+
+    const totalPosts = await Post.countDocuments();
     const posts = await Post.find()
       .populate("author", "username")
       .populate({
         path: "comments",
         populate: { path: "author", select: "username" },
       })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     return res.json({
       message: "Posts fetched successfully",
       posts,
+      page,
+      limit,
+      totalPages: Math.ceil(totalPosts / limit),
+      totalPosts,
     });
   } catch (error) {
     console.error("GET POSTS ERROR:", error.message);
@@ -106,27 +120,52 @@ exports.toggleLike = async (req, res) => {
       return res.status(400).json({ message: "Invalid post ID" });
     }
 
-    const post = await Post.findById(postId);
-
-    if (!post) {
+    const postExists = await Post.findById(postId);
+    if (!postExists) {
       return res.status(404).json({ message: "Post not found" });
     }
 
-    const likeIndex = post.likes.findIndex(
-      (id) => String(id) === String(userId)
+    // Atomically unlike if user already liked
+    const unlikedPost = await Post.findOneAndUpdate(
+      { _id: postId, likes: userId },
+      { $pull: { likes: userId } },
+      { returnDocument: "after" }
     );
 
-    if (likeIndex >= 0) {
-      post.likes.splice(likeIndex, 1);
-    } else {
-      post.likes.push(userId);
+    if (unlikedPost) {
+      return res.json({
+        message: "Post unliked",
+        likes: unlikedPost.likes.length,
+      });
     }
 
-    await post.save();
+    // Otherwise atomically add user to likes ($addToSet guarantees uniqueness)
+    const likedPost = await Post.findOneAndUpdate(
+      { _id: postId },
+      { $addToSet: { likes: userId } },
+      { returnDocument: "after" }
+    );
+
+    // Create and emit notification if actor is not the post author
+    if (String(likedPost.author) !== String(userId)) {
+      try {
+        const notification = new Notification({
+          recipient: likedPost.author,
+          actor: userId,
+          type: "like",
+          post: postId,
+        });
+        await notification.save();
+        await notification.populate("actor", "username");
+        emitNotification(likedPost.author, notification);
+      } catch (notifErr) {
+        console.error("NOTIFICATION ERROR:", notifErr.message);
+      }
+    }
 
     return res.json({
-      message: likeIndex >= 0 ? "Post unliked" : "Post liked",
-      likes: post.likes.length,
+      message: "Post liked",
+      likes: likedPost.likes.length,
     });
   } catch (error) {
     console.error("LIKE ERROR:", error.message);
@@ -168,6 +207,23 @@ exports.addComment = async (req, res) => {
     post.comments.push(comment._id);
     await post.save();
 
+    // Create and emit notification if actor is not the post author
+    if (String(post.author) !== String(userId)) {
+      try {
+        const notification = new Notification({
+          recipient: post.author,
+          actor: userId,
+          type: "comment",
+          post: postId,
+        });
+        await notification.save();
+        await notification.populate("actor", "username");
+        emitNotification(post.author, notification);
+      } catch (notifErr) {
+        console.error("NOTIFICATION ERROR:", notifErr.message);
+      }
+    }
+
     return res.status(201).json({
       message: "Comment added successfully",
       comment,
@@ -175,5 +231,130 @@ exports.addComment = async (req, res) => {
   } catch (error) {
     console.error("COMMENT ERROR:", error.message);
     return res.status(500).json({ message: "Error adding comment" });
+  }
+};
+
+// ================= GET COMMENTS (PAGINATED) =================
+exports.getComments = async (req, res) => {
+  try {
+    const { id: postId } = req.params;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const skip = (page - 1) * limit;
+
+    if (!mongoose.isValidObjectId(postId)) {
+      return res.status(400).json({ message: "Invalid post ID" });
+    }
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    const totalComments = await Comment.countDocuments({ post: postId });
+    const comments = await Comment.find({ post: postId })
+      .populate("author", "username")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    return res.json({
+      comments,
+      page,
+      limit,
+      totalPages: Math.ceil(totalComments / limit),
+      totalComments,
+    });
+  } catch (error) {
+    console.error("GET COMMENTS ERROR:", error.message);
+    return res.status(500).json({ message: "Error fetching comments" });
+  }
+};
+
+// ================= DELETE COMMENT (AUTHOR ONLY) =================
+exports.deleteComment = async (req, res) => {
+  try {
+    const { id: commentId } = req.params;
+    const userId = req.user.id;
+
+    if (!mongoose.isValidObjectId(commentId)) {
+      return res.status(400).json({ message: "Invalid comment ID" });
+    }
+
+    const comment = await Comment.findById(commentId);
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+
+    if (String(comment.author) !== String(userId)) {
+      return res.status(403).json({
+        message: "Not authorized to delete this comment",
+      });
+    }
+
+    await comment.deleteOne();
+    await Post.findByIdAndUpdate(comment.post, {
+      $pull: { comments: comment._id },
+    });
+
+    return res.json({ message: "Comment deleted successfully" });
+  } catch (error) {
+    console.error("DELETE COMMENT ERROR:", error.message);
+    return res.status(500).json({ message: "Error deleting comment" });
+  }
+};
+
+// ================= GET FEED (CURSOR-BASED PAGINATION) =================
+exports.getFeed = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const { cursor } = req.query;
+
+    const followingDocs = await Follow.find({ follower: userId }).select("following");
+    const followingIds = followingDocs.map((doc) => doc.following);
+
+    if (followingIds.length === 0) {
+      return res.json({
+        posts: [],
+        nextCursor: null,
+        hasMore: false,
+      });
+    }
+
+    const filter = { author: { $in: followingIds } };
+
+    if (cursor) {
+      const cursorDate = new Date(cursor);
+      if (isNaN(cursorDate.getTime())) {
+        return res.status(400).json({ message: "Invalid cursor format" });
+      }
+      filter.createdAt = { $lt: cursorDate };
+    }
+
+    const posts = await Post.find(filter)
+      .populate("author", "username")
+      .populate({
+        path: "comments",
+        populate: { path: "author", select: "username" },
+      })
+      .sort({ createdAt: -1 })
+      .limit(limit + 1);
+
+    const hasMore = posts.length > limit;
+    const feedPosts = hasMore ? posts.slice(0, limit) : posts;
+    const nextCursor =
+      hasMore && feedPosts.length > 0
+        ? feedPosts[feedPosts.length - 1].createdAt.toISOString()
+        : null;
+
+    return res.json({
+      posts: feedPosts,
+      nextCursor,
+      hasMore,
+    });
+  } catch (error) {
+    console.error("FEED ERROR:", error.message);
+    return res.status(500).json({ message: "Error fetching feed" });
   }
 };

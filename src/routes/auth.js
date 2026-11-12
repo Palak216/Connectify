@@ -1,19 +1,17 @@
 const express = require("express");
 const router = express.Router();
 const authController = require("../controllers/authController");
+const authMiddleware = require("../middlewares/authmiddleware");
+const validate = require("../middlewares/validate");
+const { signupSchema, loginSchema } = require("../validations/schemas");
 
 // POST /api/auth/signup
-router.post("/signup", authController.signup);
+router.post("/signup", validate(signupSchema), authController.signup);
 
 // POST /api/auth/login
-router.post("/login", authController.login);
-// Logout (JWT-based authentication)
-router.post("/logout", (req, res) => {
-  return res.status(200).json({
-    message: "Logged out successfully",
-  });
-});
+router.post("/login", validate(loginSchema), authController.login);
 
-
+// POST /api/auth/logout (JWT protected)
+router.post("/logout", authMiddleware, authController.logout);
 
 module.exports = router;
